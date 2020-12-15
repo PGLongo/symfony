@@ -79,7 +79,7 @@ class EntryManager implements EntryManagerInterface
         $con = $this->getConnectionResource();
 
         if (!@ldap_mod_add($con, $entry->getDn(), [$attribute => $values])) {
-            throw new LdapException(sprintf('Could not add values to entry "%s", attribute %s: ', $entry->getDn(), $attribute).ldap_error($con), ldap_errno($con));
+            throw new LdapException(sprintf('Could not add values to entry "%s", attribute "%s": ', $entry->getDn(), $attribute).ldap_error($con), ldap_errno($con));
         }
     }
 
@@ -94,7 +94,7 @@ class EntryManager implements EntryManagerInterface
         $con = $this->getConnectionResource();
 
         if (!@ldap_mod_del($con, $entry->getDn(), [$attribute => $values])) {
-            throw new LdapException(sprintf('Could not remove values from entry "%s", attribute %s: ', $entry->getDn(), $attribute).ldap_error($con), ldap_errno($con));
+            throw new LdapException(sprintf('Could not remove values from entry "%s", attribute "%s": ', $entry->getDn(), $attribute).ldap_error($con), ldap_errno($con));
         }
     }
 
@@ -151,14 +151,15 @@ class EntryManager implements EntryManagerInterface
             $operationsMapped[] = $modification->toArray();
         }
 
-        if (!@ldap_modify_batch($this->getConnectionResource(), $dn, $operationsMapped)) {
-            throw new UpdateOperationException(sprintf('Error executing UpdateOperation on "%s": ', $dn).ldap_error($this->getConnectionResource()), ldap_errno($con));
+        $con = $this->getConnectionResource();
+        if (!@ldap_modify_batch($con, $dn, $operationsMapped)) {
+            throw new UpdateOperationException(sprintf('Error executing UpdateOperation on "%s": ', $dn).ldap_error($con), ldap_errno($con));
         }
     }
 
     private function parseRdnFromEntry(Entry $entry): string
     {
-        if (!preg_match('/^([^,]+),/', $entry->getDn(), $matches)) {
+        if (!preg_match('/(^[^,\\\\]*(?:\\\\.[^,\\\\]*)*),/', $entry->getDn(), $matches)) {
             throw new LdapException(sprintf('Entry "%s" malformed, could not parse RDN.', $entry->getDn()));
         }
 

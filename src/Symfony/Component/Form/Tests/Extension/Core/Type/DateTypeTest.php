@@ -18,7 +18,7 @@ use Symfony\Component\Intl\Util\IntlTestHelper;
 
 class DateTypeTest extends BaseTypeTest
 {
-    const TESTED_TYPE = 'Symfony\Component\Form\Extension\Core\Type\DateType';
+    public const TESTED_TYPE = 'Symfony\Component\Form\Extension\Core\Type\DateType';
 
     private $defaultTimezone;
     private $defaultLocale;
@@ -1048,7 +1048,7 @@ class DateTypeTest extends BaseTypeTest
         ];
     }
 
-    public function testSubmitStringWithCustomInputFormat(): void
+    public function testSubmitStringWithCustomInputFormat()
     {
         $form = $this->factory->create(static::TESTED_TYPE, null, [
             'model_timezone' => 'UTC',

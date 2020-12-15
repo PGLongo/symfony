@@ -13,6 +13,7 @@ namespace Symfony\Component\Notifier\Bridge\RocketChat;
 
 use Symfony\Component\Notifier\Exception\LogicException;
 use Symfony\Component\Notifier\Exception\TransportException;
+use Symfony\Component\Notifier\Exception\UnsupportedMessageTypeException;
 use Symfony\Component\Notifier\Message\ChatMessage;
 use Symfony\Component\Notifier\Message\MessageInterface;
 use Symfony\Component\Notifier\Message\SentMessage;
@@ -23,9 +24,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * @author Jeroen Spee <https://github.com/Jeroeny>
  *
- * @internal
- *
- * @experimental in 5.1
+ * @experimental in 5.3
  */
 final class RocketChatTransport extends AbstractTransport
 {
@@ -45,6 +44,10 @@ final class RocketChatTransport extends AbstractTransport
 
     public function __toString(): string
     {
+        if (null === $this->chatChannel) {
+            return sprintf('rocketchat://%s', $this->getEndpoint());
+        }
+
         return sprintf('rocketchat://%s?channel=%s', $this->getEndpoint(), $this->chatChannel);
     }
 
@@ -54,12 +57,12 @@ final class RocketChatTransport extends AbstractTransport
     }
 
     /**
-     * @see https://rocket.chat/docs/administrator-guides/integrations/
+     * @see https://rocket.chat/docs/administrator-guides/integrations
      */
     protected function doSend(MessageInterface $message): SentMessage
     {
         if (!$message instanceof ChatMessage) {
-            throw new LogicException(sprintf('The "%s" transport only supports instances of "%s" (instance of "%s" given).', __CLASS__, ChatMessage::class, get_debug_type($message)));
+            throw new UnsupportedMessageTypeException(__CLASS__, ChatMessage::class, $message);
         }
         if ($message->getOptions() && !$message->getOptions() instanceof RocketChatOptions) {
             throw new LogicException(sprintf('The "%s" transport only supports instances of "%s" for options.', __CLASS__, RocketChatOptions::class));
@@ -90,9 +93,9 @@ final class RocketChatTransport extends AbstractTransport
 
         $success = $response->toArray(false);
 
-        $message = new SentMessage($message, (string) $this);
-        $message->setMessageId($success['message']['_id']);
+        $sentMessage = new SentMessage($message, (string) $this);
+        $sentMessage->setMessageId($success['message']['_id']);
 
-        return $message;
+        return $sentMessage;
     }
 }

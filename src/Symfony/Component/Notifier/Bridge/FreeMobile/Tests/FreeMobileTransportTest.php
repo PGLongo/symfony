@@ -13,45 +13,62 @@ namespace Symfony\Component\Notifier\Bridge\FreeMobile\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Notifier\Bridge\FreeMobile\FreeMobileTransport;
-use Symfony\Component\Notifier\Exception\LogicException;
+use Symfony\Component\Notifier\Exception\UnsupportedMessageTypeException;
 use Symfony\Component\Notifier\Message\MessageInterface;
 use Symfony\Component\Notifier\Message\SmsMessage;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class FreeMobileTransportTest extends TestCase
 {
-    public function testToStringContainsProperties(): void
+    public function testToStringContainsProperties()
     {
-        $transport = $this->getTransport('0611223344');
+        $transport = $this->createTransport('0611223344');
 
         $this->assertSame('freemobile://host.test?phone=0611223344', (string) $transport);
     }
 
-    public function testSupportsMessageInterface(): void
+    /**
+     * @dataProvider supportsProvider
+     */
+    public function testSupportsMessageInterface(bool $expected, string $configuredPhoneNumber, MessageInterface $message)
     {
-        $transport = $this->getTransport('0611223344');
+        $transport = $this->createTransport($configuredPhoneNumber);
 
-        $this->assertTrue($transport->supports(new SmsMessage('0611223344', 'Hello!')));
-        $this->assertTrue($transport->supports(new SmsMessage('+33611223344', 'Hello!')));
-        $this->assertFalse($transport->supports(new SmsMessage('0699887766', 'Hello!')));
-        $this->assertFalse($transport->supports($this->createMock(MessageInterface::class), 'Hello!'));
-
-        $transport = $this->getTransport('+33611223344');
-
-        $this->assertTrue($transport->supports(new SmsMessage('0611223344', 'Hello!')));
-        $this->assertTrue($transport->supports(new SmsMessage('+33611223344', 'Hello!')));
+        $this->assertSame($expected, $transport->supports($message));
     }
 
-    public function testSendNonSmsMessageThrowsException(): void
+    /**
+     * @return iterable<array{0: bool, 1: string, 2: MessageInterface}>
+     */
+    public function supportsProvider(): iterable
     {
-        $transport = $this->getTransport('0611223344');
+        yield [true, '0611223344', new SmsMessage('0611223344', 'Hello!')];
+        yield [true, '0611223344', new SmsMessage('+33611223344', 'Hello!')];
+        yield [false, '0611223344', new SmsMessage('0699887766', 'Hello!')];
+        yield [false, '0611223344', $this->createMock(MessageInterface::class)];
+        yield [true, '+33611223344', new SmsMessage('0611223344', 'Hello!')];
+        yield [true, '+33611223344', new SmsMessage('+33611223344', 'Hello!')];
+    }
 
-        $this->expectException(LogicException::class);
+    public function testSendNonSmsMessageThrowsLogicException()
+    {
+        $transport = $this->createTransport('0611223344');
+
+        $this->expectException(UnsupportedMessageTypeException::class);
+
+        $transport->send($this->createMock(MessageInterface::class));
+    }
+
+    public function testSendSmsMessageButInvalidPhoneThrowsLogicException()
+    {
+        $transport = $this->createTransport('0611223344');
+
+        $this->expectException(UnsupportedMessageTypeException::class);
 
         $transport->send(new SmsMessage('0699887766', 'Hello!'));
     }
 
-    private function getTransport(string $phone): FreeMobileTransport
+    private function createTransport(string $phone): FreeMobileTransport
     {
         return (new FreeMobileTransport('login', 'pass', $phone, $this->createMock(HttpClientInterface::class)))->setHost('host.test');
     }

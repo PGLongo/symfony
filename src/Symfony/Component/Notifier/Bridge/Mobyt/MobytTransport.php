@@ -13,6 +13,7 @@ namespace Symfony\Component\Notifier\Bridge\Mobyt;
 
 use Symfony\Component\Notifier\Exception\LogicException;
 use Symfony\Component\Notifier\Exception\TransportException;
+use Symfony\Component\Notifier\Exception\UnsupportedMessageTypeException;
 use Symfony\Component\Notifier\Message\MessageInterface;
 use Symfony\Component\Notifier\Message\SentMessage;
 use Symfony\Component\Notifier\Message\SmsMessage;
@@ -23,7 +24,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * @author Basien Durand <bdurand-dev@outlook.com>
  *
- * @experimental in 5.2
+ * @experimental in 5.3
  */
 final class MobytTransport extends AbstractTransport
 {
@@ -34,7 +35,7 @@ final class MobytTransport extends AbstractTransport
     private $from;
     private $typeQuality;
 
-    public function __construct(string $accountSid, string $authToken, $from, string $typeQuality, HttpClientInterface $client = null, EventDispatcherInterface $dispatcher = null)
+    public function __construct(string $accountSid, string $authToken, string $from, string $typeQuality, HttpClientInterface $client = null, EventDispatcherInterface $dispatcher = null)
     {
         $this->accountSid = $accountSid;
         $this->authToken = $authToken;
@@ -57,7 +58,7 @@ final class MobytTransport extends AbstractTransport
     protected function doSend(MessageInterface $message): SentMessage
     {
         if (!$message instanceof SmsMessage) {
-            throw new LogicException(sprintf('The "%s" transport only supports instances of "%s" (instance of "%s" given).', __CLASS__, SmsMessage::class, \get_class($message)));
+            throw new UnsupportedMessageTypeException(__CLASS__, SmsMessage::class, $message);
         }
 
         if ($message->getOptions() && !$message->getOptions() instanceof MobytOptions) {
@@ -93,9 +94,9 @@ final class MobytTransport extends AbstractTransport
 
         $success = $response->toArray(false);
 
-        $message = new SentMessage($message, (string) $this);
-        $message->setMessageId($success['order_id']);
+        $sentMessage = new SentMessage($message, (string) $this);
+        $sentMessage->setMessageId($success['order_id']);
 
-        return $message;
+        return $sentMessage;
     }
 }

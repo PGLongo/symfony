@@ -17,6 +17,9 @@ use Symfony\Component\HttpClient\Exception\JsonException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
+/**
+ * @group legacy
+ */
 class RemoteJsonManifestVersionStrategyTest extends TestCase
 {
     public function testGetVersion()
@@ -30,14 +33,14 @@ class RemoteJsonManifestVersionStrategyTest extends TestCase
     {
         $strategy = $this->createStrategy('https://cdn.example.com/manifest-valid.json');
 
-        $this->assertSame('css/styles.555def.css', $strategy->getVersion('css/styles.css'));
+        $this->assertSame('css/styles.555def.css', $strategy->applyVersion('css/styles.css'));
     }
 
     public function testApplyVersionWhenKeyDoesNotExistInManifest()
     {
         $strategy = $this->createStrategy('https://cdn.example.com/manifest-valid.json');
 
-        $this->assertSame('css/other.css', $strategy->getVersion('css/other.css'));
+        $this->assertSame('css/other.css', $strategy->applyVersion('css/other.css'));
     }
 
     public function testMissingManifestFileThrowsException()

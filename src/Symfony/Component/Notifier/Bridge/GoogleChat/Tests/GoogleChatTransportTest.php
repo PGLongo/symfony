@@ -17,6 +17,7 @@ use Symfony\Component\Notifier\Bridge\GoogleChat\GoogleChatOptions;
 use Symfony\Component\Notifier\Bridge\GoogleChat\GoogleChatTransport;
 use Symfony\Component\Notifier\Exception\LogicException;
 use Symfony\Component\Notifier\Exception\TransportException;
+use Symfony\Component\Notifier\Exception\UnsupportedMessageTypeException;
 use Symfony\Component\Notifier\Message\ChatMessage;
 use Symfony\Component\Notifier\Message\MessageInterface;
 use Symfony\Component\Notifier\Message\MessageOptionsInterface;
@@ -26,32 +27,32 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class GoogleChatTransportTest extends TestCase
 {
-    public function testToStringContainsProperties(): void
+    public function testToStringContainsProperties()
     {
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $this->createMock(HttpClientInterface::class));
+        $transport = $this->createTransport();
         $transport->setHost(null);
 
         $this->assertSame('googlechat://chat.googleapis.com/My-Space', (string) $transport);
     }
 
-    public function testSupportsChatMessage(): void
+    public function testSupportsChatMessage()
     {
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $this->createMock(HttpClientInterface::class));
+        $transport = $this->createTransport();
 
         $this->assertTrue($transport->supports(new ChatMessage('testChatMessage')));
         $this->assertFalse($transport->supports($this->createMock(MessageInterface::class)));
     }
 
-    public function testSendNonChatMessageThrows(): void
+    public function testSendNonChatMessageThrowsLogicException()
     {
-        $this->expectException(LogicException::class);
+        $transport = $this->createTransport();
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $this->createMock(HttpClientInterface::class));
+        $this->expectException(UnsupportedMessageTypeException::class);
 
         $transport->send($this->createMock(MessageInterface::class));
     }
 
-    public function testSendWithEmptyArrayResponseThrows(): void
+    public function testSendWithEmptyArrayResponseThrows()
     {
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage('Unable to post the Google Chat message: "[]"');
@@ -69,14 +70,14 @@ class GoogleChatTransportTest extends TestCase
             return $response;
         });
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client);
+        $transport = $this->createTransport($client);
 
         $sentMessage = $transport->send(new ChatMessage('testMessage'));
 
         $this->assertSame('spaces/My-Space/messages/abcdefg.hijklmno', $sentMessage->getMessageId());
     }
 
-    public function testSendWithErrorResponseThrows(): void
+    public function testSendWithErrorResponseThrows()
     {
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage('API key not valid. Please pass a valid API key.');
@@ -93,14 +94,14 @@ class GoogleChatTransportTest extends TestCase
             return $response;
         });
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client);
+        $transport = $this->createTransport($client);
 
         $sentMessage = $transport->send(new ChatMessage('testMessage'));
 
         $this->assertSame('spaces/My-Space/messages/abcdefg.hijklmno', $sentMessage->getMessageId());
     }
 
-    public function testSendWithOptions(): void
+    public function testSendWithOptions()
     {
         $message = 'testMessage';
 
@@ -124,7 +125,7 @@ class GoogleChatTransportTest extends TestCase
             return $response;
         });
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client);
+        $transport = $this->createTransport($client);
         $transport->setThreadKey('My-Thread');
 
         $sentMessage = $transport->send(new ChatMessage('testMessage'));
@@ -132,7 +133,7 @@ class GoogleChatTransportTest extends TestCase
         $this->assertSame('spaces/My-Space/messages/abcdefg.hijklmno', $sentMessage->getMessageId());
     }
 
-    public function testSendWithNotification(): void
+    public function testSendWithNotification()
     {
         $response = $this->createMock(ResponseInterface::class);
 
@@ -157,14 +158,14 @@ class GoogleChatTransportTest extends TestCase
             return $response;
         });
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client);
+        $transport = $this->createTransport($client);
 
         $sentMessage = $transport->send($chatMessage);
 
         $this->assertSame('spaces/My-Space/messages/abcdefg.hijklmno', $sentMessage->getMessageId());
     }
 
-    public function testSendWithInvalidOptions(): void
+    public function testSendWithInvalidOptions()
     {
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('The "'.GoogleChatTransport::class.'" transport only supports instances of "'.GoogleChatOptions::class.'" for options.');
@@ -173,12 +174,12 @@ class GoogleChatTransportTest extends TestCase
             return $this->createMock(ResponseInterface::class);
         });
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client);
+        $transport = $this->createTransport($client);
 
         $transport->send(new ChatMessage('testMessage', $this->createMock(MessageOptionsInterface::class)));
     }
 
-    public function testSendWith200ResponseButNotOk(): void
+    public function testSendWith200ResponseButNotOk()
     {
         $message = 'testMessage';
 
@@ -202,10 +203,15 @@ class GoogleChatTransportTest extends TestCase
             return $response;
         });
 
-        $transport = new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client);
+        $transport = $this->createTransport($client);
 
         $sentMessage = $transport->send(new ChatMessage('testMessage'));
 
         $this->assertSame('spaces/My-Space/messages/abcdefg.hijklmno', $sentMessage->getMessageId());
+    }
+
+    private function createTransport(?HttpClientInterface $client = null): GoogleChatTransport
+    {
+        return new GoogleChatTransport('My-Space', 'theAccessKey', 'theAccessToken=', $client ?: $this->createMock(HttpClientInterface::class));
     }
 }

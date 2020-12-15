@@ -18,6 +18,7 @@ use Symfony\Component\Notifier\Bridge\FreeMobile\FreeMobileTransportFactory;
 use Symfony\Component\Notifier\Bridge\GatewayApi\GatewayApiTransportFactory;
 use Symfony\Component\Notifier\Bridge\GoogleChat\GoogleChatTransportFactory;
 use Symfony\Component\Notifier\Bridge\Infobip\InfobipTransportFactory;
+use Symfony\Component\Notifier\Bridge\Iqsms\IqsmsTransportFactory;
 use Symfony\Component\Notifier\Bridge\LinkedIn\LinkedInTransportFactory;
 use Symfony\Component\Notifier\Bridge\Mattermost\MattermostTransportFactory;
 use Symfony\Component\Notifier\Bridge\Mobyt\MobytTransportFactory;
@@ -74,7 +75,7 @@ return static function (ContainerConfigurator $container) {
 
         ->set('notifier.transport_factory.firebase', FirebaseTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
-            ->tag('texter.transport_factory')
+            ->tag('chatter.transport_factory')
 
         ->set('notifier.transport_factory.freemobile', FreeMobileTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
@@ -109,6 +110,10 @@ return static function (ContainerConfigurator $container) {
             ->tag('texter.transport_factory')
 
         ->set('notifier.transport_factory.sendinblue', SendinblueTransportFactory::class)
+            ->parent('notifier.transport_factory.abstract')
+            ->tag('texter.transport_factory')
+
+        ->set('notifier.transport_factory.iqsms', IqsmsTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 

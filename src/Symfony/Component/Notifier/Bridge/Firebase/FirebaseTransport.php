@@ -12,8 +12,8 @@
 namespace Symfony\Component\Notifier\Bridge\Firebase;
 
 use Symfony\Component\Notifier\Exception\InvalidArgumentException;
-use Symfony\Component\Notifier\Exception\LogicException;
 use Symfony\Component\Notifier\Exception\TransportException;
+use Symfony\Component\Notifier\Exception\UnsupportedMessageTypeException;
 use Symfony\Component\Notifier\Message\ChatMessage;
 use Symfony\Component\Notifier\Message\MessageInterface;
 use Symfony\Component\Notifier\Message\SentMessage;
@@ -24,7 +24,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * @author Jeroen Spee <https://github.com/Jeroeny>
  *
- * @experimental in 5.1
+ * @experimental in 5.3
  */
 final class FirebaseTransport extends AbstractTransport
 {
@@ -54,7 +54,7 @@ final class FirebaseTransport extends AbstractTransport
     protected function doSend(MessageInterface $message): SentMessage
     {
         if (!$message instanceof ChatMessage) {
-            throw new LogicException(sprintf('The "%s" transport only supports instances of "%s" (instance of "%s" given).', __CLASS__, ChatMessage::class, get_debug_type($message)));
+            throw new UnsupportedMessageTypeException(__CLASS__, ChatMessage::class, $message);
         }
 
         $endpoint = sprintf('https://%s', $this->getEndpoint());
@@ -80,17 +80,17 @@ final class FirebaseTransport extends AbstractTransport
         if (200 !== $response->getStatusCode()) {
             $errorMessage = $jsonContents ? $jsonContents['results']['error'] : $response->getContent(false);
 
-            throw new TransportException(sprintf('Unable to post the Firebase message: %s.', $errorMessage), $response);
+            throw new TransportException('Unable to post the Firebase message: '.$errorMessage, $response);
         }
         if ($jsonContents && isset($jsonContents['results']['error'])) {
-            throw new TransportException(sprintf('Unable to post the Firebase message: %s.', $jsonContents['error']), $response);
+            throw new TransportException('Unable to post the Firebase message: '.$jsonContents['error'], $response);
         }
 
         $success = $response->toArray(false);
 
-        $message = new SentMessage($message, (string) $this);
-        $message->setMessageId($success['results'][0]['message_id']);
+        $sentMessage = new SentMessage($message, (string) $this);
+        $sentMessage->setMessageId($success['results'][0]['message_id']);
 
-        return $message;
+        return $sentMessage;
     }
 }

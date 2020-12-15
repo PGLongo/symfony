@@ -13,6 +13,7 @@ namespace Symfony\Component\Notifier\Bridge\Zulip;
 
 use Symfony\Component\Notifier\Exception\LogicException;
 use Symfony\Component\Notifier\Exception\TransportException;
+use Symfony\Component\Notifier\Exception\UnsupportedMessageTypeException;
 use Symfony\Component\Notifier\Message\ChatMessage;
 use Symfony\Component\Notifier\Message\MessageInterface;
 use Symfony\Component\Notifier\Message\SentMessage;
@@ -23,7 +24,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * @author Mohammad Emran Hasan <phpfour@gmail.com>
  *
- * @experimental in 5.2
+ * @experimental in 5.3
  */
 class ZulipTransport extends AbstractTransport
 {
@@ -56,14 +57,12 @@ class ZulipTransport extends AbstractTransport
     protected function doSend(MessageInterface $message): SentMessage
     {
         if (!$message instanceof ChatMessage) {
-            throw new LogicException(sprintf('The "%s" transport only supports instances of "%s" (instance of "%s" given).', __CLASS__, ChatMessage::class, get_debug_type($message)));
+            throw new UnsupportedMessageTypeException(__CLASS__, ChatMessage::class, $message);
         }
 
         if (null !== $message->getOptions() && !($message->getOptions() instanceof ZulipOptions)) {
             throw new LogicException(sprintf('The "%s" transport only supports instances of "%s" for options.', __CLASS__, ZulipOptions::class));
         }
-
-        $endpoint = sprintf('https://%s/api/v1/messages', $this->getEndpoint());
 
         $options = ($opts = $message->getOptions()) ? $opts->toArray() : [];
         $options['content'] = $message->getSubject();
@@ -80,6 +79,8 @@ class ZulipTransport extends AbstractTransport
             $options['to'] = $message->getRecipientId();
         }
 
+        $endpoint = sprintf('https://%s/api/v1/messages', $this->getEndpoint());
+
         $response = $this->client->request('POST', $endpoint, [
             'auth_basic' => $this->email.':'.$this->token,
             'body' => $options,
@@ -93,9 +94,9 @@ class ZulipTransport extends AbstractTransport
 
         $success = $response->toArray(false);
 
-        $message = new SentMessage($message, (string) $this);
-        $message->setMessageId($success['id']);
+        $sentMessage = new SentMessage($message, (string) $this);
+        $sentMessage->setMessageId($success['id']);
 
-        return $message;
+        return $sentMessage;
     }
 }

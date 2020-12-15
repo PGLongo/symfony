@@ -19,7 +19,7 @@ use Symfony\Component\Notifier\Notification\Notification;
 /**
  * @author Jérôme Tamarelle <jerome@tamarelle.net>
  *
- * @experimental in 5.2
+ * @experimental in 5.3
  */
 final class GoogleChatOptions implements MessageOptionsInterface
 {
@@ -40,6 +40,7 @@ final class GoogleChatOptions implements MessageOptionsInterface
         if ($notification->getContent()) {
             $text .= "\r\n".$notification->getContent();
         }
+
         if ($exception = $notification->getExceptionAsString()) {
             $text .= "\r\n".'```'.$notification->getExceptionAsString().'```';
         }
